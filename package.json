@@ -20,12 +20,23 @@
   "build": {
     "appId": "com.yourname.livekit-client",
     "productName": "LiveKit Client",
+    "asar": false,
     "directories": {
       "output": "dist"
     },
     "files": [
       "src/**/*",
-      "node_modules/**/*"
+      "node_modules/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "node_modules/livekit-client/dist",
+        "to": "node_modules/livekit-client/dist",
+        "filter": [
+          "**/*"
+        ]
+      }
     ],
     "win": {
       "target": [
@@ -44,6 +55,11 @@
     }
   },
   "devDependencies": {
+    "electron": "^41.0.2",
     "electron-builder": "^26.8.1"
+  },
+  "dependencies": {
+    "jsrsasign": "^11.1.1",
+    "livekit-client": "^2.17.3"
   }
 }
