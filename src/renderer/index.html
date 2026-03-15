@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LiveKit 视频会议客户端</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #1a1a2e;
+      color: #fff;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 30px;
+      color: #00d9ff;
+    }
+
+    /* 连接表单 */
+    .connect-form {
+      background: #16213e;
+      padding: 30px;
+      border-radius: 12px;
+      margin-bottom: 30px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      color: #a0a0a0;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #333;
+      border-radius: 8px;
+      background: #0f0f23;
+      color: #fff;
+      font-size: 14px;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: #00d9ff;
+    }
+
+    .btn {
+      padding: 12px 30px;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .btn-primary {
+      background: #00d9ff;
+      color: #1a1a2e;
+      font-weight: bold;
+    }
+
+    .btn-primary:hover {
+      background: #00b8d4;
+    }
+
+    .btn-danger {
+      background: #ff4757;
+      color: #fff;
+    }
+
+    .btn-success {
+      background: #2ed573;
+      color: #1a1a2e;
+    }
+
+    /* 视频区域 */
+    .video-area {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+
+    .video-container {
+      background: #16213e;
+      border-radius: 12px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .video-container h3 {
+      padding: 15px;
+      background: #0f0f23;
+      font-size: 14px;
+      color: #a0a0a0;
+    }
+
+    video {
+      width: 100%;
+      height: 300px;
+      object-fit: cover;
+      background: #000;
+    }
+
+    .video-label {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      background: rgba(0, 0, 0, 0.6);
+      padding: 5px 10px;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+
+    /* 控制按钮 */
+    .controls {
+      background: #16213e;
+      padding: 20px;
+      border-radius: 12px;
+      display: flex;
+      gap: 15px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .controls .btn {
+      min-width: 150px;
+    }
+
+    /* 屏幕共享选择器 */
+    .source-selector {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      z-index: 1000;
+    }
+
+    .source-selector.active {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .source-list {
+      background: #16213e;
+      padding: 30px;
+      border-radius: 12px;
+      max-width: 800px;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+
+    .source-list h2 {
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .source-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 15px;
+    }
+
+    .source-item {
+      background: #0f0f23;
+      padding: 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.3s;
+      border: 2px solid transparent;
+    }
+
+    .source-item:hover {
+      border-color: #00d9ff;
+    }
+
+    .source-item img {
+      width: 100%;
+      height: 120px;
+      object-fit: contain;
+      background: #000;
+      border-radius: 4px;
+    }
+
+    .source-item p {
+      margin-top: 8px;
+      font-size: 12px;
+      text-align: center;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .close-selector {
+      margin-top: 20px;
+      width: 100%;
+    }
+
+    /* 状态显示 */
+    .status {
+      text-align: center;
+      padding: 15px;
+      background: #16213e;
+      border-radius: 12px;
+      margin-bottom: 20px;
+    }
+
+    .status.connected {
+      border-left: 4px solid #2ed573;
+    }
+
+    .status.disconnected {
+      border-left: 4px solid #ff4757;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>LiveKit 视频会议客户端</h1>
+
+    <!-- 连接表单 -->
+    <div class="connect-form">
+      <div class="form-group">
+        <label>服务器地址 (WebSocket)</label>
+        <input type="text" id="serverUrl" value="ws://172.30.0.9:7880" placeholder="ws://localhost:7880">
+      </div>
+      <div class="form-group">
+        <label>房间名</label>
+        <input type="text" id="roomName" value="test-room" placeholder="房间名">
+      </div>
+      <div class="form-group">
+        <label>用户名</label>
+        <input type="text" id="userName" value="user1" placeholder="你的名字">
+      </div>
+      <button class="btn btn-primary" id="connectBtn">连接房间</button>
+      <button class="btn btn-danger" id="disconnectBtn" style="display: none;">断开连接</button>
+    </div>
+
+    <!-- 状态显示 -->
+    <div class="status disconnected" id="status">
+      <span id="statusText">未连接</span>
+    </div>
+
+    <!-- 视频区域 -->
+    <div class="video-area">
+      <!-- 本地视频 -->
+      <div class="video-container">
+        <h3>本地视频</h3>
+        <video id="localVideo" autoplay muted playsinline></video>
+        <div class="video-label" id="localLabel">等待连接...</div>
+      </div>
+      
+      <!-- 远程视频 -->
+      <div class="video-container">
+        <h3>远程视频</h3>
+        <video id="remoteVideo" autoplay playsinline></video>
+        <div class="video-label" id="remoteLabel">等待对方加入...</div>
+      </div>
+    </div>
+
+    <!-- 控制按钮 -->
+    <div class="controls">
+      <button class="btn btn-success" id="shareScreenBtn" disabled>共享屏幕</button>
+      <button class="btn btn-danger" id="stopShareBtn" style="display: none;">停止共享</button>
+      <button class="btn btn-primary" id="toggleVideoBtn" disabled>关闭摄像头</button>
+      <button class="btn btn-primary" id="toggleAudioBtn" disabled>静音</button>
+    </div>
+  </div>
+
+  <!-- 屏幕共享源选择器 -->
+  <div class="source-selector" id="sourceSelector">
+    <div class="source-list">
+      <h2>选择要共享的内容</h2>
+      <div class="source-grid" id="sourceGrid"></div>
+      <button class="btn btn-danger close-selector" id="closeSelector">取消</button>
+    </div>
+  </div>
+
+  <!-- LiveKit SDK -->
+  <script src="../../node_modules/livekit-client/dist/livekit-client.umd.js"></script>
+  
+  <script>
+    // 获取 DOM 元素
+    const connectBtn = document.getElementById('connectBtn');
+    const disconnectBtn = document.getElementById('disconnectBtn');
+    const shareScreenBtn = document.getElementById('shareScreenBtn');
+    const stopShareBtn = document.getElementById('stopShareBtn');
+    const toggleVideoBtn = document.getElementById('toggleVideoBtn');
+    const toggleAudioBtn = document.getElementById('toggleAudioBtn');
+    const localVideo = document.getElementById('localVideo');
+    const remoteVideo = document.getElementById('remoteVideo');
+    const status = document.getElementById('status');
+    const statusText = document.getElementById('statusText');
+    const sourceSelector = document.getElementById('sourceSelector');
+    const sourceGrid = document.getElementById('sourceGrid');
+
+    // 状态变量
+    let room = null;
+    let localTracks = [];
+    let isVideoEnabled = true;
+    let isAudioEnabled = true;
+    let isScreenSharing = false;
+
+    // 获取 Token (实际项目中应该从服务器获取)
+    async function getToken(roomName, userName) {
+      // 这里需要替换为实际的 Token 服务器地址
+      // 你可以使用之前创建的 gen_livekit_token.py
+      const response = await fetch(`http://172.30.0.9:8080/token?room=${roomName}&username=${userName}`);
+      const data = await response.json();
+      return data.token;
+    }
+
+    // 连接房间
+    async function connect() {
+      const serverUrl = document.getElementById('serverUrl').value;
+      const roomName = document.getElementById('roomName').value;
+      const userName = document.getElementById('userName').value;
+
+      try {
+        // 获取 Token
+        const token = await getToken(roomName, userName);
+
+        // 创建 Room 实例
+        room = new LiveKit.Room();
+
+        // 监听房间事件
+        room.on('trackSubscribed', (track, publication, participant) => {
+          console.log('Track subscribed:', track.kind);
+          if (track.kind === 'video' || track.kind === 'audio') {
+            track.attach(remoteVideo);
+          }
+        });
+
+        room.on('trackUnsubscribed', (track) => {
+          console.log('Track unsubscribed');
+          track.detach();
+        });
+
+        room.on('participantConnected', (participant) => {
+          console.log('Participant connected:', participant.identity);
+          document.getElementById('remoteLabel').textContent = participant.identity + ' 已加入';
+        });
+
+        room.on('participantDisconnected', (participant) => {
+          console.log('Participant disconnected:', participant.identity);
+          document.getElementById('remoteLabel').textContent = '等待对方加入...';
+        });
+
+        // 连接
+        await room.connect(serverUrl, token);
+        console.log('Connected to room');
+
+        // 获取本地音视频轨道
+        const tracks = await LiveKit.createLocalTracks({
+          audio: true,
+          video: true
+        });
+
+        // 发布本地轨道
+        for (const track of tracks) {
+          await room.localParticipant.publishTrack(track);
+          localTracks.push(track);
+          if (track.kind === 'video') {
+            track.attach(localVideo);
+          }
+        }
+
+        // 更新 UI
+        updateUI(true);
+        document.getElementById('localLabel').textContent = userName + ' (你)';
+
+      } catch (error) {
+        console.error('连接失败:', error);
+        alert('连接失败: ' + error.message);
+      }
+    }
+
+    // 断开连接
+    async function disconnect() {
+      if (room) {
+        await room.disconnect();
+        room = null;
+      }
+
+      // 停止所有本地轨道
+      for (const track of localTracks) {
+        track.stop();
+      }
+      localTracks = [];
+
+      // 清理视频
+      localVideo.srcObject = null;
+      remoteVideo.srcObject = null;
+
+      updateUI(false);
+    }
+
+    // 更新 UI 状态
+    function updateUI(connected) {
+      if (connected) {
+        status.className = 'status connected';
+        statusText.textContent = '已连接到房间';
+        connectBtn.style.display = 'none';
+        disconnectBtn.style.display = 'inline-block';
+        shareScreenBtn.disabled = false;
+        toggleVideoBtn.disabled = false;
+        toggleAudioBtn.disabled = false;
+      } else {
+        status.className = 'status disconnected';
+        statusText.textContent = '未连接';
+        connectBtn.style.display = 'inline-block';
+        disconnectBtn.style.display = 'none';
+        shareScreenBtn.disabled = true;
+        toggleVideoBtn.disabled = true;
+        toggleAudioBtn.disabled = true;
+        document.getElementById('localLabel').textContent = '等待连接...';
+        document.getElementById('remoteLabel').textContent = '等待对方加入...';
+      }
+    }
+
+    // 共享屏幕
+    async function startScreenShare() {
+      try {
+        // 获取屏幕共享源
+        const sources = await window.electronAPI.getSources();
+
+        if (sources.length === 0) {
+          alert('没有可共享的屏幕或窗口');
+          return;
+        }
+
+        // 显示源选择器
+        sourceGrid.innerHTML = '';
+        sources.forEach(source => {
+          const item = document.createElement('div');
+          item.className = 'source-item';
+          item.innerHTML = `
+            <img src="${source.thumbnail}" alt="${source.name}">
+            <p>${source.name}</p>
+          `;
+          item.onclick = () => selectSource(source.id);
+          sourceGrid.appendChild(item);
+        });
+
+        sourceSelector.classList.add('active');
+
+      } catch (error) {
+        console.error('获取屏幕源失败:', error);
+        alert('获取屏幕源失败: ' + error.message);
+      }
+    }
+
+    // 选择屏幕源并开始共享
+    async function selectSource(sourceId) {
+      sourceSelector.classList.remove('active');
+
+      try {
+        // 使用 navigator.mediaDevices.getDisplayMedia
+        const stream = await navigator.mediaDevices.getDisplayMedia({
+          video: {
+            // @ts-ignore - Electron 特有属性
+            mandatory: {
+              chromeMediaSource: 'desktop',
+              chromeMediaSourceId: sourceId
+            }
+          },
+          audio: false
+        });
+
+        // 将屏幕共享轨道添加到房间
+        const videoTrack = stream.getVideoTracks()[0];
+        
+        // 创建 LiveKit Track
+        const track = new LiveKit.LocalVideoTrack(videoTrack);
+        await room.localParticipant.publishTrack(track);
+        
+        // 监听用户停止共享
+        videoTrack.onended = () => {
+          stopScreenShare();
+        };
+
+        isScreenSharing = true;
+        shareScreenBtn.style.display = 'none';
+        stopShareBtn.style.display = 'inline-block';
+        document.getElementById('localLabel').textContent = '正在共享屏幕';
+
+      } catch (error) {
+        console.error('屏幕共享失败:', error);
+        // 用户取消时也会报错
+        if (error.name !== 'AbortError') {
+          alert('屏幕共享失败: ' + error.message);
+        }
+      }
+    }
+
+    // 停止屏幕共享
+    async function stopScreenShare() {
+      // 停止所有屏幕共享轨道
+      for (const track of room.localParticipant.tracks.values()) {
+        if (track.source === 'screen_share') {
+          await room.localParticipant.unpublishTrack(track);
+          track.track.stop();
+        }
+      }
+
+      isScreenSharing = false;
+      shareScreenBtn.style.display = 'inline-block';
+      stopShareBtn.style.display = 'none';
+      document.getElementById('localLabel').textContent = '你';
+    }
+
+    // 切换视频
+    function toggleVideo() {
+      if (room) {
+        if (isVideoEnabled) {
+          room.localParticipant.enableVideo(false);
+          toggleVideoBtn.textContent = '开启摄像头';
+          toggleVideoBtn.classList.remove('btn-primary');
+          toggleVideoBtn.classList.add('btn-danger');
+        } else {
+          room.localParticipant.enableVideo(true);
+          toggleVideoBtn.textContent = '关闭摄像头';
+          toggleVideoBtn.classList.remove('btn-danger');
+          toggleVideoBtn.classList.add('btn-primary');
+        }
+        isVideoEnabled = !isVideoEnabled;
+      }
+    }
+
+    // 切换音频
+    function toggleAudio() {
+      if (room) {
+        if (isAudioEnabled) {
+          room.localParticipant.enableAudio(false);
+          toggleAudioBtn.textContent = '开启麦克风';
+          toggleAudioBtn.classList.remove('btn-primary');
+          toggleAudioBtn.classList.add('btn-danger');
+        } else {
+          room.localParticipant.enableAudio(true);
+          toggleAudioBtn.textContent = '静音';
+          toggleAudioBtn.classList.remove('btn-danger');
+          toggleAudioBtn.classList.add('btn-primary');
+        }
+        isAudioEnabled = !isAudioEnabled;
+      }
+    }
+
+    // 事件监听
+    connectBtn.onclick = connect;
+    disconnectBtn.onclick = disconnect;
+    shareScreenBtn.onclick = startScreenShare;
+    stopShareBtn.onclick = stopScreenShare;
+    toggleVideoBtn.onclick = toggleVideo;
+    toggleAudioBtn.onclick = toggleAudio;
+    document.getElementById('closeSelector').onclick = () => {
+      sourceSelector.classList.remove('active');
+    };
+  </script>
+</body>
+</html>

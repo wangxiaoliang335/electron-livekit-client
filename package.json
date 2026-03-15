@@ -1,0 +1,49 @@
+{
+  "name": "electron-livekit-client",
+  "version": "1.0.0",
+  "main": "src/main/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron .",
+    "build": "electron-builder --win",
+    "build:dir": "electron-builder --win --dir"
+  },
+  "keywords": [
+    "livekit",
+    "video",
+    "conference",
+    "electron"
+  ],
+  "author": "",
+  "license": "ISC",
+  "description": "LiveKit Video Conference Client for Windows",
+  "build": {
+    "appId": "com.yourname.livekit-client",
+    "productName": "LiveKit Client",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "node_modules/**/*"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  },
+  "devDependencies": {
+    "electron-builder": "^26.8.1"
+  }
+}
