@@ -326,11 +326,9 @@
 
     // 获取 Token (实际项目中应该从服务器获取)
     async function getToken(roomName, userName) {
-      // 这里需要替换为实际的 Token 服务器地址
-      // 你可以使用之前创建的 gen_livekit_token.py
-      const response = await fetch(`http://114.67.86.96:8080/token?room=${roomName}&username=${userName}`);
-      const data = await response.json();
-      return data.token;
+      // Token 服务器返回的是纯 token 字符串，不需要 JSON 解析
+      const response = await fetch(`http://114.67.86.96:8080/token?user=${userName}`);
+      return await response.text();
     }
 
     // 连接房间
